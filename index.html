@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Peter Calendar</title>
 <style>
-  /* ====== Root & Reset (mobile-first) ====== */
   :root{
     --bg:#071026; --panel:#0b1220; --muted:#9aa8bd;
     --accent1:#7c3aed; --accent2:#06b6d4; --accent3:#f97316;
@@ -25,7 +24,7 @@
   .wrap{max-width:var(--max-width);margin:18px auto;padding:14px;display:grid;grid-template-columns:1fr;gap:var(--gap)}
   .app{display:grid;grid-template-columns:1fr;gap:var(--gap);min-height:72vh;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);padding:14px;border-radius:16px;box-shadow:0 12px 40px rgba(2,6,23,0.6)}
 
-  /* ====== Header (mobile) ====== */
+
   header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
   .brand{display:flex;align-items:center;gap:10px}
   .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accent1),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:700;color:white}
@@ -486,3 +485,4 @@ document.querySelectorAll('.nav-btn').forEach(b=> b.dataset.route = b.getAttribu
 </script>
 </body>
 </html>
+
