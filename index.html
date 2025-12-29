@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ProColor Calendar — Single File Multi-Page</title>
+
+<!-- GLOBAL STYLES (shared across pages) -->
+<style>
+  :root{
+    --bg:#0f1724; --card:#0b1220; --accent1:#7c3aed; --accent2:#06b6d4; --accent3:#f97316;
+    --muted:#94a3b8; --glass: rgba(255,255,255,0.04); --radius:14px; --shadow: 0 8px 30px rgba(2,6,23,0.6);
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%; margin:0; background:
+    radial-gradient(1200px 600px at 10% 10%, rgba(124,58,237,0.12), transparent),
+    radial-gradient(900px 400px at 90% 90%, rgba(6,182,212,0.06), transparent),
+    var(--bg); color:#e6eef8; -webkit-font-smoothing:antialiased; padding:20px;}
+  .app{max-width:1100px;margin:0 auto; display:grid; grid-template-columns:260px 1fr; gap:18px; min-height:80vh; padding:18px; border-radius:18px; box-shadow:var(--shadow); background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));}
+  @media (max-width:900px){ .app{grid-template-columns:1fr;padding:12px} .sidebar{order:2} .main{order:1} }
+  /* Sidebar */
+  .sidebar{background:linear-gradient(180deg,var(--glass),rgba(255,255,255,0.02)); padding:16px;border-radius:12px; display:flex;flex-direction:column; gap:12px; min-height:420px;}
+  .logo{width:48px;height:48px;border-radius:10px;background:linear-gradient(135deg,var(--accent1),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:700;color:white;transform:rotate(-8deg)}
+  .nav-link{display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;color:inherit;text-decoration:none;cursor:pointer}
+  .nav-link.active{background:linear-gradient(90deg, rgba(124,58,237,0.12), rgba(6,182,212,0.06))}
+  .time-card{margin-top:auto;padding:12px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent)}
+  .time-big{font-size:18px;font-weight:700}
+  /* main container */
+  .main{padding:18px;border-radius:12px;background:transparent; overflow:auto; min-height:420px}
+  .page{display:none; opacity:0; transform:translateY(8px); transition:all 320ms cubic-bezier(.2,.9,.3,1)}
+  .page.active{display:block; opacity:1; transform:none}
+  .btn{padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);cursor:pointer}
+  .btn.primary{background:linear-gradient(90deg,var(--accent1),var(--accent2)); color:#021124}
+  .small{font-size:13px;color:var(--muted)}
+  /* shared calendar styles (used by calendar page and mini calendar) */
+  .calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+  .weekday{color:var(--muted);font-size:12px;text-align:center}
+  .day{min-height:84px;padding:8px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);border:1px solid rgba(255,255,255,0.02);position:relative;overflow:hidden}
+  .event-pill{padding:6px 8px;border-radius:8px;font-size:12px;color:#021124;cursor:pointer}
+  /* modal */
+  .modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,0.6);display:flex;align-items:center;justify-content:center;z-index:60}
+  .modal{background:linear-gradient(180deg,#071022,#06121a);padding:18px;border-radius:12px;width:92%;max-width:520px}
+  input,select,textarea{background:transparent;border:1px solid rgba(255,255,255,0.04);padding:10px;border-radius:8px;color:inherit;width:100%}
+  /* small helpers */
+  .flex{display:flex;gap:12px;align-items:center}
+  .stack{display:flex;flex-direction:column;gap:8px}
+  ::-webkit-scrollbar{height:8px;width:8px} ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.04);border-radius:999px}
+</style>
+</head>
+<body>
+  <div class="app" role="application" aria-label="ProColor Calendar">
+    <!-- SIDEBAR (shared) -->
+    <aside class="sidebar" aria-hidden="false">
+      <div style="display:flex;gap:12px;align-items:center">
+        <div class="logo">Peter</div>
+        <div>
+          <div style="font-weight:700">Peter Calendar</div>
+          <div class="small"> calendar</div>
+        </div>
+      </div>
+
+      <nav aria-label="Main navigation">
+        <div class="nav-link active" data-route="#home" id="link-home">🏠 Home</div>
+        <div class="nav-link" data-route="#calendar" id="link-calendar">📅 Calendar</div>
+        <div class="nav-link" data-route="#events" id="link-events">🗂️ Events</div>
+        <div class="nav-link" data-route="#names" id="link-names">🧾 Names</div>
+        <div class="nav-link" data-route="#about" id="link-about">ℹ️ About</div>
+      </nav>
+
+      <div class="time-card" aria-live="polite">
+        <div class="time-big" id="live-time">--:--:--</div>
+        <div class="small" id="live-date">Loading date</div>
+      </div>
+    </aside>
+
+    <!-- MAIN (pages live here; each page has its own HTML block) -->
+    <main class="main">
+      <!-- ============================
+           PAGE: HOME
+           HTML | CSS | JS for Home are grouped here
+           ============================ -->
+      <section id="home" class="page active" aria-labelledby="home-title">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+          <div>
+            <h1 id="home-title" style="margin:0">Welcome — PeterCalendar</h1>
+            <div class="small">Colorful,professional calendar</div>
+          </div>
+          <div class="flex">
+            <button class="btn" id="homeToday">Today</button>
+            <button class="btn primary" id="homeAdd">Add Event</button>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 320px;gap:16px;margin-top:16px">
+          <!-- Home: Mini calendar (HTML for mini calendar) -->
+          <div style="padding:14px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);">
+            <h3 style="margin-top:0">Quick Calendar</h3>
+            <div id="homeMiniWeekdays" class="calendar-grid" style="grid-template-columns:repeat(7,1fr);margin-bottom:8px"></div>
+            <div id="homeMini" class="calendar-grid" style="grid-template-columns:repeat(7,1fr)"></div>
+            <p class="small" style="margin-top:12px">Tap any day to add an event.</p>
+          </div>
+
+          <!-- Home: Snapshot & tips -->
+          <aside style="display:flex;flex-direction:column;gap:12px">
+            <div style="padding:14px;border-radius:12px;background:linear-gradient(90deg,var(--accent1),var(--accent2));color:#021124;">
+              <div style="font-weight:700">Today Snapshot</div>
+              <div id="homeSnapshot" style="margin-top:8px;font-weight:600"></div>
+            </div>
+
+            <div style="padding:12px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);">
+              <div style="font-weight:700">Tips</div>
+              <ul class="small" style="margin:8px 0 0 18px">
+                <li>Events persist locally in your browser</li>
+                <li>Use the Names page to generate professional variants of Peter</li>
+                <li>Mobile friendly and animated</li>
+              </ul>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- ============================
+           PAGE: CALENDAR
+           HTML | CSS | JS for Calendar are grouped here
+           ============================ -->
+      <section id="calendar" class="page" aria-labelledby="calendar-title">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <h2 id="calendar-title" style="margin:0">Calendar</h2>
+            <div class="small" id="calendarSub">Month view</div>
+          </div>
+          <div class="flex">
+            <button class="btn" id="prevM">◀</button>
+            <button class="btn" id="nextM">▶</button>
+            <button class="btn primary" id="newEventBtn">New Event</button>
+          </div>
+        </div>
+
+        <div style="margin-top:12px">
+          <div id="calWeekdays" class="calendar-grid" style="grid-template-columns:repeat(7,1fr)"></div>
+          <div id="calGrid" class="calendar-grid" style="grid-template-columns:repeat(7,1fr);margin-top:8px"></div>
+        </div>
+      </section>
+
+      <!-- ============================
+           PAGE: EVENTS
+           HTML | CSS | JS for Events are grouped here
+           ============================ -->
+      <section id="events" class="page" aria-labelledby="events-title">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <h2 id="events-title" style="margin:0">Events</h2>
+          <div class="small">Manage your saved events</div>
+        </div>
+        <div id="eventsList" style="margin-top:12px"></div>
+      </section>
+
+      <!-- ============================
+           PAGE: NAMES
+           HTML | CSS | JS for Name Generator are grouped here
+           ============================ -->
+      <section id="names" class="page" aria-labelledby="names-title">
+        <h2 id="names-title" style="margin-top:0">Peter Name Generator</h2>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px">
+          <div style="flex:1;min-width:220px;padding:12px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);">
+            <label class="small">Prefix</label>
+            <select id="prefixSelect"><option value="">(none)</option><option>Dr</option><option>Mr</option><option>Ms</option><option>Prof</option><option>Eng</option></select>
+            <label class="small" style="margin-top:8px">Suffix</label>
+            <select id="suffixSelect"><option value="">(none)</option><option>Jr</option><option>Sr</option><option>III</option><option>PhD</option><option>Esq</option></select>
+            <button class="btn primary" id="genBtn" style="margin-top:10px">Generate</button>
+          </div>
+
+          <div style="flex:2;min-width:220px;padding:12px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);">
+            <label class="small">Results</label>
+            <div id="nameResults" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"></div>
+            <div class="small" style="margin-top:8px">Tap a name to copy</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================
+           PAGE: ABOUT
+           HTML | CSS | JS for About are grouped here
+           ============================ -->
+      <section id="about" class="page" aria-labelledby="about-title">
+        <h2 id="about-title" style="margin-top:0">About</h2>
+        <p class="small">Single-file multi-page calendar demo. Each page's HTML, CSS, and JS are grouped in this file for easy editing.</p>
+        <p class="small">Events are stored locally. Extend with server sync or authentication as needed.</p>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODAL TEMPLATE (shared) -->
+  <template id="modalTpl">
+    <div class="modal-backdrop">
+      <div class="modal" role="dialog" aria-modal="true">
+        <h3 id="modalTitle">Add Event</h3>
+        <div style="margin-top:8px" class="stack">
+          <label class="small">Title</label>
+          <input id="mTitle" placeholder="Event title" />
+          <div style="display:flex;gap:8px">
+            <div style="flex:1">
+              <label class="small">Date</label>
+              <input id="mDate" type="date" />
+            </div>
+            <div style="width:140px">
+              <label class="small">Time</label>
+              <input id="mTime" type="time" />
+            </div>
+          </div>
+          <label class="small">Color</label>
+          <input id="mColor" type="color" value="#f97316" />
+          <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px">
+            <button class="btn" id="mCancel">Cancel</button>
+            <button class="btn primary" id="mSave">Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </template>
+
+<script>
+/* ============================
+   GLOBAL JS (shared state + helpers)
+   ============================ */
+const state = { viewDate: new Date(), events: JSON.parse(localStorage.getItem('pc_events')||'[]'), route:'#home' };
+function saveEvents(){ localStorage.setItem('pc_events', JSON.stringify(state.events)); }
+function uid(){ return 'id_'+Math.random().toString(36).slice(2,9); }
+function formatISO(d){ return d.toISOString().slice(0,10); }
+function formatTimeNow(){ return new Date().toTimeString().slice(0,5); }
+
+/* Live time (shared) */
+function updateLive(){
+  const now = new Date();
+  document.getElementById('live-time').textContent = now.toLocaleTimeString();
+  document.getElementById('live-date').textContent = now.toLocaleDateString(undefined,{weekday:'long', year:'numeric', month:'long', day:'numeric'});
+  const snap = document.getElementById('homeSnapshot'); if(snap) snap.textContent = now.toLocaleString();
+}
+setInterval(updateLive,1000); updateLive();
+
+/* ROUTING (hashless internal routing using data-route) */
+const navLinks = document.querySelectorAll('.nav-link');
+function goRoute(hash){
+  state.route = hash || '#home';
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const el = document.querySelector(state.route);
+  if(el) el.classList.add('active');
+  navLinks.forEach(n=> n.classList.toggle('active', n.dataset.route === state.route));
+  // page-specific render triggers
+  if(state.route === '#calendar') renderCalendarPage();
+  if(state.route === '#events') renderEventsPage();
+  if(state.route === '#home') renderHomeMini();
+}
+navLinks.forEach(n=> n.addEventListener('click', ()=> goRoute(n.dataset.route)));
+goRoute(state.route);
+
+/* Modal factory (shared) */
+function openModal({title='Add Event', data={}, onSave}){
+  const tpl = document.getElementById('modalTpl').content.cloneNode(true);
+  document.body.appendChild(tpl);
+  const backdrop = document.querySelector('.modal-backdrop:last-of-type');
+  backdrop.querySelector('#modalTitle').textContent = title;
+  const mTitle = backdrop.querySelector('#mTitle');
+  const mDate = backdrop.querySelector('#mDate');
+  const mTime = backdrop.querySelector('#mTime');
+  const mColor = backdrop.querySelector('#mColor');
+  const mCancel = backdrop.querySelector('#mCancel');
+  const mSave = backdrop.querySelector('#mSave');
+  mTitle.value = data.title || '';
+  mDate.value = data.date || formatISO(new Date());
+  mTime.value = data.time || formatTimeNow();
+  mColor.value = data.color || '#f97316';
+  function close(){ backdrop.remove(); }
+  mCancel.addEventListener('click', close);
+  backdrop.addEventListener('click', (e)=> { if(e.target === backdrop) close(); });
+  mSave.addEventListener('click', ()=>{
+    const payload = { title: mTitle.value || 'Untitled', date: mDate.value, time: mTime.value, color: mColor.value };
+    if(typeof onSave === 'function') onSave(payload);
+    close();
+  });
+  return { close };
+}
+
+/* ============================
+   PAGE: HOME JS (mini calendar)
+   ============================ */
+function renderHomeMini(){
+  // weekdays
+  const wk = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const wkEl = document.getElementById('homeMiniWeekdays'); wkEl.innerHTML='';
+  wk.forEach(w=> { const d=document.createElement('div'); d.className='weekday'; d.textContent=w; wkEl.appendChild(d); });
+
+  const container = document.getElementById('homeMini'); container.innerHTML='';
+  const now = new Date();
+  const year = now.getFullYear(), month = now.getMonth();
+  const first = new Date(year,month,1).getDay();
+  const days = new Date(year,month+1,0).getDate();
+  for(let i=0;i<first;i++){ container.appendChild(document.createElement('div')); }
+  for(let d=1; d<=days; d++){
+    const cell = document.createElement('div'); cell.className='day';
+    cell.innerHTML = '<div style="font-weight:700">'+d+'</div>';
+    cell.addEventListener('click', ()=> openModal({ title:'Add Event', data:{ date: new Date(year,month,d).toISOString().slice(0,10) }, onSave: (p)=>{ state.events.push({...p,id:uid()}); saveEvents(); renderHomeMini(); renderCalendarPage(); renderEventsPage(); } }));
+    container.appendChild(cell);
+  }
+}
+document.getElementById('homeToday').addEventListener('click', ()=> { state.viewDate = new Date(); goRoute('#calendar'); });
+document.getElementById('homeAdd').addEventListener('click', ()=> openModal({ onSave:(p)=>{ state.events.push({...p,id:uid()}); saveEvents(); renderHomeMini(); renderCalendarPage(); renderEventsPage(); } }));
+
+/* ============================
+   PAGE: CALENDAR JS
+   ============================ */
+function renderCalendarPage(){
+  const wk = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const wkEl = document.getElementById('calWeekdays'); wkEl.innerHTML='';
+  wk.forEach(w=> { const d=document.createElement('div'); d.className='weekday'; d.textContent=w; wkEl.appendChild(d); });
+
+  const grid = document.getElementById('calGrid'); grid.innerHTML='';
+  const view = new Date(state.viewDate);
+  const year = view.getFullYear(), month = view.getMonth();
+  document.getElementById('calendarSub').textContent = view.toLocaleString(undefined,{month:'long', year:'numeric'});
+  const first = new Date(year,month,1).getDay();
+  const days = new Date(year,month+1,0).getDate();
+  for(let i=0;i<first;i++){ grid.appendChild(document.createElement('div')); }
+  for(let d=1; d<=days; d++){
+    const dayEl = document.createElement('div'); dayEl.className='day';
+    const dateNum = document.createElement('div'); dateNum.style.fontWeight='700'; dateNum.textContent = d;
+    dayEl.appendChild(dateNum);
+    const eventsWrap = document.createElement('div'); eventsWrap.style.position='absolute'; eventsWrap.style.left='8px'; eventsWrap.style.right='8px'; eventsWrap.style.bottom='8px'; eventsWrap.style.display='flex'; eventsWrap.style.flexDirection='column'; eventsWrap.style.gap='6px';
+    const iso = new Date(year,month,d).toISOString().slice(0,10);
+    const dayEvents = state.events.filter(e=> e.date === iso);
+    dayEvents.slice(0,3).forEach(ev=>{
+      const pill = document.createElement('div'); pill.className='event-pill'; pill.style.background = ev.color || 'linear-gradient(90deg,var(--accent3),var(--accent2))'; pill.textContent = ev.title;
+      pill.addEventListener('click', (evnt)=> { evnt.stopPropagation(); openEditEvent(ev.id); });
+      eventsWrap.appendChild(pill);
+    });
+    dayEl.appendChild(eventsWrap);
+    dayEl.addEventListener('click', ()=> openModal({ title:'Add Event', data:{ date: iso }, onSave:(p)=>{ state.events.push({...p,id:uid()}); saveEvents(); renderCalendarPage(); renderHomeMini(); renderEventsPage(); } }));
+    grid.appendChild(dayEl);
+  }
+}
+document.getElementById('prevM').addEventListener('click', ()=> { state.viewDate.setMonth(state.viewDate.getMonth()-1); renderCalendarPage(); });
+document.getElementById('nextM').addEventListener('click', ()=> { state.viewDate.setMonth(state.viewDate.getMonth()+1); renderCalendarPage(); });
+document.getElementById('newEventBtn').addEventListener('click', ()=> openModal({ onSave:(p)=>{ state.events.push({...p,id:uid()}); saveEvents(); renderCalendarPage(); renderHomeMini(); renderEventsPage(); } }));
+
+/* edit event helper */
+function openEditEvent(id){
+  const ev = state.events.find(x=>x.id===id); if(!ev) return;
+  openModal({ title:'Edit Event', data:ev, onSave:(p)=>{ ev.title=p.title; ev.date=p.date; ev.time=p.time; ev.color=p.color; saveEvents(); renderCalendarPage(); renderHomeMini(); renderEventsPage(); } });
+  // add delete button inside modal (simple approach: after modal opens, append a delete button)
+  setTimeout(()=>{
+    const backdrop = document.querySelector('.modal-backdrop:last-of-type');
+    if(!backdrop) return;
+    const del = document.createElement('button'); del.className='btn'; del.textContent='Delete'; del.style.marginRight='auto';
+    del.addEventListener('click', ()=>{ state.events = state.events.filter(x=>x.id!==id); saveEvents(); backdrop.remove(); renderCalendarPage(); renderHomeMini(); renderEventsPage(); });
+    const modal = backdrop.querySelector('.modal');
+    modal.querySelector('div.stack').appendChild(del);
+  },50);
+}
+
+/* ============================
+   PAGE: EVENTS JS
+   ============================ */
+function renderEventsPage(){
+  const container = document.getElementById('eventsList'); container.innerHTML='';
+  if(state.events.length === 0){ container.innerHTML = '<p class="small">No events yet. Add one from the calendar.</p>'; return; }
+  const list = document.createElement('div'); list.style.display='flex'; list.style.flexDirection='column'; list.style.gap='10px';
+  state.events.slice().sort((a,b)=> a.date.localeCompare(b.date) || (a.time||'').localeCompare(b.time||'')).forEach(ev=>{
+    const card = document.createElement('div'); card.style.display='flex'; card.style.justifyContent='space-between'; card.style.alignItems='center'; card.style.padding='12px'; card.style.borderRadius='10px'; card.style.background='linear-gradient(90deg, rgba(124,58,237,0.06), rgba(6,182,212,0.03))';
+    const left = document.createElement('div'); left.innerHTML = '<div style="font-weight:700">'+ev.title+'</div><div class="small">'+ev.date + (ev.time ? ' • ' + ev.time : '') +'</div>';
+    const right = document.createElement('div');
+    const edit = document.createElement('button'); edit.className='btn'; edit.textContent='Edit'; edit.addEventListener('click', ()=> openEditEvent(ev.id));
+    const del = document.createElement('button'); del.className='btn'; del.style.marginLeft='8px'; del.textContent='Delete'; del.addEventListener('click', ()=>{ state.events = state.events.filter(x=>x.id!==ev.id); saveEvents(); renderEventsPage(); renderCalendarPage(); renderHomeMini(); });
+    right.appendChild(edit); right.appendChild(del);
+    card.appendChild(left); card.appendChild(right); list.appendChild(card);
+  });
+  container.appendChild(list);
+}
+
+/* ============================
+   PAGE: NAMES JS
+   ============================ */
+const baseNames = ['Peter','Pieter','Petar','Petr','Petros','Petter','Péter','Pietro','Petey'];
+function generateNames(prefix, suffix){
+  const results = [];
+  baseNames.forEach(n=>{
+    const p = prefix ? (prefix + ' ' + n) : n;
+    const s = suffix ? (n + ' ' + suffix) : n;
+    const both = (prefix ? prefix + ' ' : '') + n + (suffix ? ' ' + suffix : '');
+    results.push(p); if(s !== n) results.push(s); if(both !== p && both !== s) results.push(both);
+    results.push((prefix ? prefix[0]+'. ' : '') + n);
+    results.push(n + (suffix ? ', ' + suffix : ''));
+  });
+  return Array.from(new Set(results)).slice(0,24);
+}
+document.getElementById('genBtn').addEventListener('click', ()=>{
+  const prefix = document.getElementById('prefixSelect').value;
+  const suffix = document.getElementById('suffixSelect').value;
+  const res = generateNames(prefix, suffix);
+  const container = document.getElementById('nameResults'); container.innerHTML='';
+  res.forEach(r=>{
+    const chip = document.createElement('div'); chip.style.padding='8px 10px'; chip.style.borderRadius='999px'; chip.style.background='linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))'; chip.style.cursor='pointer'; chip.textContent = r;
+    chip.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(r); chip.style.transform='scale(0.98)'; setTimeout(()=>chip.style.transform='',120); }catch(e){} });
+    container.appendChild(chip);
+  });
+});
+
+/* ============================
+   INITIAL RENDERS & SHORTCUTS
+   ============================ */
+renderHomeMini(); renderCalendarPage(); renderEventsPage();
+document.addEventListener('keydown', (e)=>{ if(e.key==='n') openModal({ onSave:(p)=>{ state.events.push({...p,id:uid()}); saveEvents(); renderCalendarPage(); renderHomeMini(); renderEventsPage(); } }); if(e.key==='g') goRoute('#names'); if(e.key==='e') goRoute('#events'); });
+
+</script>
+</body>
+</html>
