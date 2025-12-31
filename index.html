@@ -1,112 +1,97 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Peter Calendar</title>
-<style>
-  :root{
-    --bg:#071026; --panel:#0b1220; --muted:#9aa8bd;
-    --accent1:#7c3aed; --accent2:#06b6d4; --accent3:#f97316;
-    --radius:12px; --gap:12px; --touch:48px; --max-width:1100px;
-    font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-    color-scheme: dark;
-  }
-  *{box-sizing:border-box}
-  html,body{height:100%;margin:0;background:
-    radial-gradient(800px 400px at 10% 10%, rgba(124,58,237,0.08), transparent),
-    radial-gradient(600px 300px at 90% 90%, rgba(6,182,212,0.04), transparent),
-    var(--bg); color:#e6eef8; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;}
-  a{color:inherit}
-  button{font:inherit}
-
-  /* ====== App container ====== */
-  .wrap{max-width:var(--max-width);margin:18px auto;padding:14px;display:grid;grid-template-columns:1fr;gap:var(--gap)}
-  .app{display:grid;grid-template-columns:1fr;gap:var(--gap);min-height:72vh;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);padding:14px;border-radius:16px;box-shadow:0 12px 40px rgba(2,6,23,0.6)}
-
-
-  header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
-  .brand{display:flex;align-items:center;gap:10px}
-  .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accent1),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:700;color:white}
-  .title{font-weight:700}
-  .hamburger{background:transparent;border:1px solid rgba(255,255,255,0.04);padding:8px;border-radius:10px;color:inherit;min-width:44px}
-
-  /* ====== Layout: sidebar + main (desktop) ====== */
-  .layout{display:grid;grid-template-columns:1fr;gap:var(--gap)}
-  .sidebar{display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent)}
-  .nav{display:flex;gap:8px;flex-wrap:wrap}
-  .nav button{background:transparent;border:0;padding:8px 10px;border-radius:10px;cursor:pointer;color:var(--muted)}
-  .nav button.active{background:linear-gradient(90deg, rgba(124,58,237,0.12), rgba(6,182,212,0.06));color:#fff}
-  .time-card{margin-top:auto;padding:10px;border-radius:10px;background:rgba(255,255,255,0.02);font-size:14px}
-
-  .main{padding:12px;border-radius:12px;background:transparent;min-height:420px}
-
-  /* ====== Pages ====== */
-  .page{display:none;opacity:0;transform:translateY(6px);transition:all 260ms ease}
-  .page.active{display:block;opacity:1;transform:none}
-
-  /* ====== Buttons & inputs ====== */
-  .btn{padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit;cursor:pointer}
-  .btn.primary{background:linear-gradient(90deg,var(--accent1),var(--accent2));color:#021124}
-  input,select{background:transparent;border:1px solid rgba(255,255,255,0.04);padding:10px;border-radius:8px;color:inherit;width:100%}
-  label{display:block;color:var(--muted);font-size:13px;margin-bottom:6px}
-
-  /* ====== Calendar styles ====== */
-  .calendar-wrap{display:flex;flex-direction:column;gap:10px}
-  .cal-header{display:flex;justify-content:space-between;align-items:center;gap:8px}
-  .cal-grid{display:grid;gap:8px}
-  .weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
-  .weekday{font-size:12px;color:var(--muted);text-align:center}
-  .days{display:grid;gap:8px}
-  .day{background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);padding:8px;border-radius:10px;min-height:72px;border:1px solid rgba(255,255,255,0.02);position:relative;overflow:hidden}
-  .date-num{font-weight:700}
-  .events{position:absolute;left:8px;right:8px;bottom:8px;display:flex;flex-direction:column;gap:6px;max-height:56px;overflow:auto}
-  .pill{padding:6px 8px;border-radius:8px;font-size:12px;color:#021124;background:linear-gradient(90deg,var(--accent3),var(--accent2));cursor:pointer}
-
-  /* ====== Events list & name chips ====== */
-  .events-list{display:flex;flex-direction:column;gap:10px}
-  .event-card{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:10px;background:linear-gradient(90deg, rgba(124,58,237,0.06), rgba(6,182,212,0.03))}
-  .name-grid{display:flex;flex-wrap:wrap;gap:8px}
-  .chip{padding:8px 10px;border-radius:999px;background:rgba(255,255,255,0.02);cursor:pointer}
-
-  /* ====== Modal ====== */
-  .modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,0.6);display:flex;align-items:center;justify-content:center;z-index:80}
-  .modal{background:linear-gradient(180deg,#071022,#06121a);padding:16px;border-radius:12px;width:92%;max-width:520px}
-
-  /* ====== Footer ====== */
-  .footer{margin-top:12px;color:var(--muted);font-size:13px;text-align:center}
-
-  /* ====== Responsive breakpoints ====== */
-  @media(min-width:900px){
-    .wrap{padding:24px}
-    .app{display:grid;grid-template-columns:260px 1fr;gap:var(--gap)}
-    .layout{grid-template-columns:260px 1fr}
-    .sidebar{min-height:520px}
-  }
-
-  /* Calendar columns adapt */
-  @media (max-width:520px){
-    .weekdays{grid-template-columns:repeat(7,1fr);font-size:11px}
-    .days{grid-template-columns:repeat(2,1fr)}
-    .day{min-height:64px}
-    .brand .title{font-size:15px}
-  }
-  @media (min-width:521px) and (max-width:760px){
-    .days{grid-template-columns:repeat(4,1fr)}
-  }
-  @media (min-width:761px){
-    .days{grid-template-columns:repeat(7,1fr)}
-  }
-
-  /* Reduced motion */
-  @media (prefers-reduced-motion:reduce){
-    *{transition:none!important}
-  }
-
-  /* Scrollbar */
-  ::-webkit-scrollbar{height:8px;width:8px}
-  ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.04);border-radius:999px}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Peter Calendar</title>
+  <style>
+    /* ====== Root & Reset (mobile-first) ====== */
+    :root{
+      --bg:#071026; --panel:#0b1220; --muted:#9aa8bd; --accent1:#7c3aed; --accent2:#06b6d4; --accent3:#f97316;
+      --radius:12px; --gap:12px; --touch:48px; --max-width:1100px;
+      font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      color-scheme: dark;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;background: radial-gradient(800px 400px at 10% 10%, rgba(124,58,237,0.08), transparent), radial-gradient(600px 300px at 90% 90%, rgba(6,182,212,0.04), transparent), var(--bg); color:#e6eef8; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;}
+    a{color:inherit} button{font:inherit}
+    
+    /* ====== App container ====== */
+    .wrap{max-width:var(--max-width);margin:18px auto;padding:14px;display:grid;grid-template-columns:1fr;gap:var(--gap)}
+    .app{display:grid;grid-template-columns:1fr;gap:var(--gap);min-height:72vh;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);padding:14px;border-radius:16px;box-shadow:0 12px 40px rgba(2,6,23,0.6)}
+    
+    /* ====== Header (mobile) ====== */
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+    .brand{display:flex;align-items:center;gap:10px}
+    .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accent1),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:700;color:white}
+    .title{font-weight:700} .hamburger{background:transparent;border:1px solid rgba(255,255,255,0.04);padding:8px;border-radius:10px;color:inherit;min-width:44px}
+    
+    /* ====== Layout: sidebar + main (desktop) ====== */
+    .layout{display:grid;grid-template-columns:1fr;gap:var(--gap)}
+    .sidebar{display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent)}
+    .nav{display:flex;gap:8px;flex-wrap:wrap} .nav button{background:transparent;border:0;padding:8px 10px;border-radius:10px;cursor:pointer;color:var(--muted)}
+    .nav button.active{background:linear-gradient(90deg, rgba(124,58,237,0.12), rgba(6,182,212,0.06));color:#fff}
+    .time-card{margin-top:auto;padding:10px;border-radius:10px;background:rgba(255,255,255,0.02);font-size:14px}
+    .main{padding:12px;border-radius:12px;background:transparent;min-height:420px}
+    
+    /* ====== Pages ====== */
+    .page{display:none;opacity:0;transform:translateY(6px);transition:all 260ms ease}
+    .page.active{display:block;opacity:1;transform:none}
+    
+    /* ====== Buttons & inputs ====== */
+    .btn{padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit;cursor:pointer}
+    .btn.primary{background:linear-gradient(90deg,var(--accent1),var(--accent2));color:#021124}
+    input,select{background:transparent;border:1px solid rgba(255,255,255,0.04);padding:10px;border-radius:8px;color:inherit;width:100%}
+    label{display:block;color:var(--muted);font-size:13px;margin-bottom:6px}
+    
+    /* ====== Calendar styles ====== */
+    .calendar-wrap{display:flex;flex-direction:column;gap:10px}
+    .cal-header{display:flex;justify-content:space-between;align-items:center;gap:8px}
+    .cal-grid{display:grid;gap:8px}
+    .weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+    .weekday{font-size:12px;color:var(--muted);text-align:center}
+    .days{display:grid;gap:8px}
+    .day{background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);padding:8px;border-radius:10px;min-height:72px;border:1px solid rgba(255,255,255,0.02);position:relative;overflow:hidden}
+    .date-num{font-weight:700}
+    .events{position:absolute;left:8px;right:8px;bottom:8px;display:flex;flex-direction:column;gap:6px;max-height:56px;overflow:auto}
+    .pill{padding:6px 8px;border-radius:8px;font-size:12px;color:#021124;background:linear-gradient(90deg,var(--accent3),var(--accent2));cursor:pointer}
+    
+    /* ====== Events list & name chips ====== */
+    .events-list{display:flex;flex-direction:column;gap:10px}
+    .event-card{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:10px;background:linear-gradient(90deg, rgba(124,58,237,0.06), rgba(6,182,212,0.03))}
+    .name-grid{display:flex;flex-wrap:wrap;gap:8px}
+    .chip{padding:8px 10px;border-radius:999px;background:rgba(255,255,255,0.02);cursor:pointer}
+    
+    /* ====== Modal ====== */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,0.6);display:flex;align-items:center;justify-content:center;z-index:80}
+    .modal{background:linear-gradient(180deg,#071022,#06121a);padding:16px;border-radius:12px;width:92%;max-width:520px}
+    
+    /* ====== Footer ====== */
+    .footer{margin-top:12px;color:var(--muted);font-size:13px;text-align:center}
+    
+    /* ====== Responsive breakpoints ====== */
+    @media(max-width:520px){
+      .wrap{padding:8px}
+      .app{padding:10px}
+      .days{grid-template-columns:repeat(2,1fr)}
+      .day{min-height:64px}
+      header{flex-wrap:wrap}
+      .hamburger{min-width:36px;padding:6px}
+    }
+    @media (min-width:521px) and (max-width:760px){
+      .days{grid-template-columns:repeat(4,1fr)}
+    }
+    @media (min-width:761px){
+      .wrap{padding:24px}
+      .app{grid-template-columns:260px 1fr;gap:var(--gap)}
+      .layout{grid-template-columns:260px 1fr}
+      .sidebar{min-height:520px}
+      .days{grid-template-columns:repeat(7,1fr)}
+    }
+    /* Scrollbar */
+    ::-webkit-scrollbar{height:8px;width:8px}
+    ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.04);border-radius:999px}
+  </style>
 </head>
 <body>
   <div class="wrap">
